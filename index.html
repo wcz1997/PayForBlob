@@ -1,87 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Blockspace Race Testnet Transaction Demo</title>
+    <meta charset="utf-8">
+    <title>Submit PFB</title>
   </head>
   <body>
-    <button onclick="submitTransaction()">Submit Transaction</button>
+    <h1>Submit PFB</h1>
+    <form id="pfb-form">
+      <label for="namespace-id">Namespace ID:</label>
+      <input type="text" id="namespace-id" name="namespace_id"><br>
 
-    <script src="https://unpkg.com/@terra-money/terra.js"></script>
-    <script src="https://unpkg.com/@terra-money/use-wallet"></script>
-    <script src="https://unpkg.com/@terra-money/use-station"></script>
+      <label for="data">Data:</label>
+      <input type="text" id="data" name="data"><br>
+
+      <button type="submit" id="submit-button">Submit</button>
+    </form>
 
     <script>
-      const BLOCKSPACERACE_PARAMS = {
-        chainId: 'blockspacerace',
-        chainName: 'Blockspace Race Testnet',
-        rpc: 'https://rpc-blockspacerace.pops.one',
-        rest: 'https://api-blockspacerace.pops.one',
-      };
+      const pfbForm = document.getElementById('pfb-form');
+      const submitButton = document.getElementById('submit-button');
+      const GAS_LIMIT = 80000;
+      const FEE = 2000;
 
-      async function submitTransaction() {
-        const namespaceId = '0c204d39600fddd3';
-        const data = 'f1f20ca8007e910a3bf8b2e61da0f26bca07ef78717a6ea54165f5';
-        const gasLimit = 80000;
-        const fee = 2000;
+      submitButton.addEventListener('click', (event) => {
+        event.preventDefault();
 
-        // Connect to the user's wallet
-        const { connect, availableConnectors } = window.TerraStationWallet;
-        const walletConnect = availableConnectors.find(
-          (connector) => connector.type === "WALLETCONNECT"
-        );
-        await connect(walletConnect);
-
-        // Get the user's account
-        const { address, terraAddress } = await window.useWallet.getAddress();
-
-        // Get the required gas estimate
-        const gasEstimate = await window.Terra.estimateFee({
-          msgs: [],
-          gasPrices: { uusd: 0.15 },
-          gasAdjustment: 1.4,
-          feeDenoms: ["uusd"],
-        });
-
-        // Create the transaction object
-        const tx = {
-          chainID: BLOCKSPACERACE_PARAMS.chainId,
-          msgs: [],
-          fee: {
-            amount: [{ amount: fee.toString(), denom: "uctk" }],
-            gas: gasLimit.toString(),
-          },
-          memo: "Test transaction",
+        const requestBody = {
+          namespace_id: pfbForm.elements['namespace_id'].value,
+          data: pfbForm.elements['data'].value,
+          gas_limit: GAS_LIMIT,
+          fee: FEE
         };
 
-        // Add the message to the transaction object
-        tx.msgs.push(
-          new window.Terra.wasm.MsgExecuteContract(
-            address,
-            namespaceId,
-            {
-              submit_pfb: {
-                data: data,
-              },
-            },
-            []
-          )
-        );
-
-        // Sign and broadcast the transaction using Keplr
-        try {
-          const response = await window.keplr.signAndBroadcast(
-            terraAddress,
-            [tx],
-            BLOCKSPACERACE_PARAMS.rpc
-          );
-          console.log("Transaction sent:", response);
-        } catch (error) {
-          console.error("Transaction failed:", error);
-        }
-      }
+        fetch('http://193.46.243.16:26659/submit_pfb', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .then(data => {
+          console.log(data); // 输出响应体内容
+        })
+        .catch(error => {
+          console.error('There was an error:', error);
+        });
+      });
     </script>
   </body>
 </html>
